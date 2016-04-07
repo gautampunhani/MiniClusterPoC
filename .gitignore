@@ -19,3 +19,5 @@ setup/impala/oozie-migrations/hql/hive-config.xml
 auto-scripts/
 equipment-import/src/test/resources/fixtures/cd_branch/.*
 equipment-import/src/test/resources/fixtures/default_labor_rate/.*
+embedded*
+share_lib_cache*
