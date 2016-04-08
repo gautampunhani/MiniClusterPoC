@@ -170,7 +170,7 @@ public class MapReduceWorkflowTest {
 
         //write workflow.xml
 
-        Reader reader = getResourceAsReader("workflow-fs.xml", -1);
+        Reader reader = getResourceAsReader("workflow-fs.xml");
         Writer writer = new OutputStreamWriter(hdfsFs.create(workflow));
         copyCharStream(reader, writer);
         writer.close();
@@ -223,11 +223,11 @@ public class MapReduceWorkflowTest {
 
     }
 
-    public Reader getResourceAsReader(String path, int maxLen) throws IOException {
-        return new InputStreamReader(getResourceAsStream(path, maxLen));
+    private Reader getResourceAsReader(String path) throws IOException {
+        return new InputStreamReader(getResourceAsStream(path));
     }
 
-    public void copyCharStream(Reader reader, Writer writer) throws IOException {
+    private void copyCharStream(Reader reader, Writer writer) throws IOException {
         char[] buffer = new char[4096];
         int read;
         while ((read = reader.read(buffer)) > -1) {
@@ -235,7 +235,7 @@ public class MapReduceWorkflowTest {
         }
     }
 
-    public InputStream getResourceAsStream(String path, int maxLen) throws IOException {
+    private InputStream getResourceAsStream(String path) throws IOException {
         InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(path);
         if (is == null) {
             throw new IllegalArgumentException("resource " + path + " not found");
