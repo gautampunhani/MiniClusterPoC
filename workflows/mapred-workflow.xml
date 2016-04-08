@@ -1,4 +1,0 @@
-<workflow-app xmlns='uri:oozie:workflow:0.1' name='test-wf'>
-    <start to='end'/>
-    <end name='end'/>
-</workflow-app>

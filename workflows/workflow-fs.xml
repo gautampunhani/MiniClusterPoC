@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns='uri:oozie:workflow:0.4' name='fs-wf'>
+    <global>
+        <job-tracker>localhost:37003</job-tracker>
+        <name-node>hdfs://localhost:20112</name-node>
+    </global>
+    <start to='fs'/>
+    <action name="fs">
+    <fs>
+        <mkdir path="hdfs://localhost:20112/user/chandukavar/chandu"/>
+        <chmod path="hdfs://localhost:20112/user/chandukavar/chandu" permissions="770"/>
+        <delete path="hdfs://localhost:20112/user/chandukavar/chandu"/>
+    </fs>
+        <ok to="end"/>
+        <error to="kill"/>
+    </action>
+    <kill name="kill">
+        <message>workflow killed</message>
+    </kill>
+    <end name='end'/>
+</workflow-app>
