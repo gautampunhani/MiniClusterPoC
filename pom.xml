@@ -75,13 +75,6 @@
             <version>${oozie.version}</version>
         </dependency>
 
-        <!-- Hadoop Mini Cluster Main -->
-        <dependency>
-            <groupId>com.github.sakserv</groupId>
-            <artifactId>hadoop-mini-clusters</artifactId>
-            <version>${minicluster.version}</version>
-        </dependency>
-
         <!-- Hadoop Mini Clusters Common -->
         <dependency>
             <groupId>com.github.sakserv</groupId>
