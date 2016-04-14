@@ -21,6 +21,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.Properties;
+import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -56,9 +60,13 @@ public class MapReduceWorkflowTest {
 
         oozieLocalServer = getOozieLocalServer();
         oozieLocalServer.start();
+
+        makeJar();
     }
 
     private static OozieLocalServer getOozieLocalServer() {
+        Configuration conf = new Configuration();
+        conf.set("oozie.service.HadoopAccessorService.jobTracker.whitelist", "localhost:37003");
         return new OozieLocalServer.Builder()
                 .setOozieTestDir(propertyParser.getProperty(ConfigVars.OOZIE_TEST_DIR_KEY))
                 .setOozieHomeDir(propertyParser.getProperty(ConfigVars.OOZIE_HOME_DIR_KEY))
@@ -75,6 +83,8 @@ public class MapReduceWorkflowTest {
                         ConfigVars.OOZIE_LOCAL_SHARE_LIB_CACHE_DIR_KEY))
                 .setOoziePurgeLocalShareLibCache(Boolean.parseBoolean(propertyParser.getProperty(
                         ConfigVars.OOZIE_PURGE_LOCAL_SHARE_LIB_CACHE_KEY)))
+                .setOozieYarnResourceManagerAddress("localhost:37003")
+                .setOozieConf(conf)
                 .build();
     }
 
@@ -92,8 +102,9 @@ public class MapReduceWorkflowTest {
                         ConfigVars.YARN_RESOURCE_MANAGER_WEBAPP_ADDRESS_KEY))
                 .setUseInJvmContainerExecutor(Boolean.parseBoolean(propertyParser.getProperty(
                         ConfigVars.YARN_USE_IN_JVM_CONTAINER_EXECUTOR_KEY)))
-                .setHdfsDefaultFs(hdfsLocalCluster.getHdfsConfig().get("fs.defaultFS"))
+                .setHdfsDefaultFs("file:///")
                 .setConfig(hdfsLocalCluster.getHdfsConfig())
+                .setResourceManagerResourceTrackerAddress("localhost:37003")
                 .build();
     }
 
@@ -168,9 +179,11 @@ public class MapReduceWorkflowTest {
         hdfsFs.mkdirs(new Path(appPath, "lib"));
         Path workflow = new Path(appPath, "workflow.xml");
 
+        hdfsFs.copyFromLocalFile(new Path("miniClusterPoC.jar"), new Path(appPath + "/lib"));
+        
         //write workflow.xml
 
-        Reader reader = getResourceAsReader("workflow-fs.xml");
+        Reader reader = getResourceAsReader("workflow-map-reduce.xml");
         Writer writer = new OutputStreamWriter(hdfsFs.create(workflow));
         copyCharStream(reader, writer);
         writer.close();
@@ -188,6 +201,9 @@ public class MapReduceWorkflowTest {
 
         oozie.start(jobId);
 
+        assertEquals(WorkflowJob.Status.RUNNING, oozie.getJobInfo(jobId).getStatus());
+
+        oozie.setDebugMode(1);
         while (oozie.getJobInfo(jobId).getStatus() == WorkflowJob.Status.RUNNING) {
             System.out.println("Workflow job running ...");
             Thread.sleep(10 * 1000);
@@ -195,7 +211,7 @@ public class MapReduceWorkflowTest {
 
         wf = oozie.getJobInfo(jobId);
 
-        System.out.print("ERROR MSG: " + wf.getActions().get(1).getErrorMessage());
+        System.out.println("ERROR MSG: " + wf.getActions().get(1).getErrorMessage());
 
         assertNotNull(wf);
         assertEquals(WorkflowJob.Status.SUCCEEDED, wf.getStatus());
@@ -243,4 +259,48 @@ public class MapReduceWorkflowTest {
         return is;
     }
 
+    public static void makeJar() throws IOException {
+        Manifest manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        JarOutputStream target = new JarOutputStream(new FileOutputStream("miniClusterPoC.jar"), manifest);
+        add(new File("./src/main"), target);
+        target.close();
+    }
+
+    private static void add(File source, JarOutputStream target) throws IOException {
+        BufferedInputStream in = null;
+        try {
+            if (source.isDirectory()) {
+                String name = source.getPath().replace("\\", "/");
+                if (!name.isEmpty()) {
+                    if (!name.endsWith("/"))
+                        name += "/";
+                    JarEntry entry = new JarEntry(name);
+                    entry.setTime(source.lastModified());
+                    target.putNextEntry(entry);
+                    target.closeEntry();
+                }
+                for (File nestedFile : source.listFiles())
+                    add(nestedFile, target);
+                return;
+            }
+
+            JarEntry entry = new JarEntry(source.getPath().replace("\\", "/"));
+            entry.setTime(source.lastModified());
+            target.putNextEntry(entry);
+            in = new BufferedInputStream(new FileInputStream(source));
+
+            byte[] buffer = new byte[1024];
+            while (true) {
+                int count = in.read(buffer);
+                if (count == -1)
+                    break;
+                target.write(buffer, 0, count);
+            }
+            target.closeEntry();
+        } finally {
+            if (in != null)
+                in.close();
+        }
+    }
 }

@@ -1,0 +1,24 @@
+<workflow-app xmlns='uri:oozie:workflow:0.4' name='test-wf'>
+    <global>
+        <job-tracker>localhost:37003</job-tracker>
+        <name-node>hdfs://localhost:20112</name-node>
+    </global>
+    <start to='javaClass'/>
+    <action name="javaClass">
+        <java>
+            <configuration>
+                <property>
+                    <name>mapred.queue.name</name>
+                    <value>default</value>
+                </property>
+            </configuration>
+            <main-class>workflows.Test</main-class>
+        </java>
+        <ok to="end"/>
+        <error to="kill"/>
+    </action>
+    <kill name="kill">
+        <message>workflow killed</message>
+    </kill>
+    <end name='end'/>
+</workflow-app>
