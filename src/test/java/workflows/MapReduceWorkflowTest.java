@@ -59,6 +59,17 @@ public class MapReduceWorkflowTest {
     }
 
     private static OozieLocalServer getOozieLocalServer() {
+        Configuration conf = new Configuration();
+        conf.set("oozie.service.ActionService.executor.ext.classes",
+                "org.apache.oozie.action.email.EmailActionExecutor," +
+                "org.apache.oozie.action.hadoop.HiveActionExecutor," +
+                "org.apache.oozie.action.hadoop.ShellActionExecutor," +
+                "org.apache.oozie.action.hadoop.SqoopActionExecutor");
+        conf.set("oozie.service.SchemaService.wf.ext.schemas",
+                "shell-action-0.1.xsd,shell-action-0.2.xsd,shell-action-0.3.xsd,email-action-0.1.xsd,hive-action-0.2.xsd," +
+                        "hive-action-0.3.xsd,hive-action-0.4.xsd,hive-action-0.5.xsd,sqoop-action-0.2.xsd,sqoop-action-0.3.xsd," +
+                        "sqoop-action-0.4.xsd,ssh-action-0.1.xsd,ssh-action-0.2.xsd,distcp-action-0.1.xsd,distcp-action-0.2.xsd," +
+                        "oozie-sla-0.1.xsd,oozie-sla-0.2.xsd");
         return new OozieLocalServer.Builder()
                 .setOozieTestDir(propertyParser.getProperty(ConfigVars.OOZIE_TEST_DIR_KEY))
                 .setOozieHomeDir(propertyParser.getProperty(ConfigVars.OOZIE_HOME_DIR_KEY))
@@ -66,8 +77,7 @@ public class MapReduceWorkflowTest {
                 .setOozieGroupname(propertyParser.getProperty(ConfigVars.OOZIE_GROUPNAME_KEY))
                 .setOozieYarnResourceManagerAddress(propertyParser.getProperty(
                         ConfigVars.YARN_RESOURCE_MANAGER_ADDRESS_KEY))
-                .setOozieHdfsDefaultFs(hdfsLocalCluster.getHdfsConfig().get("fs.defaultFS"))
-                .setOozieConf(hdfsLocalCluster.getHdfsConfig())
+                .setOozieHdfsDefaultFs("file:///")
                 .setOozieHdfsShareLibDir(propertyParser.getProperty(ConfigVars.OOZIE_HDFS_SHARE_LIB_DIR_KEY))
                 .setOozieShareLibCreate(Boolean.parseBoolean(
                         propertyParser.getProperty(ConfigVars.OOZIE_SHARE_LIB_CREATE_KEY)))
@@ -75,6 +85,7 @@ public class MapReduceWorkflowTest {
                         ConfigVars.OOZIE_LOCAL_SHARE_LIB_CACHE_DIR_KEY))
                 .setOoziePurgeLocalShareLibCache(Boolean.parseBoolean(propertyParser.getProperty(
                         ConfigVars.OOZIE_PURGE_LOCAL_SHARE_LIB_CACHE_KEY)))
+                .setOozieConf(conf)
                 .build();
     }
 
@@ -92,7 +103,7 @@ public class MapReduceWorkflowTest {
                         ConfigVars.YARN_RESOURCE_MANAGER_WEBAPP_ADDRESS_KEY))
                 .setUseInJvmContainerExecutor(Boolean.parseBoolean(propertyParser.getProperty(
                         ConfigVars.YARN_USE_IN_JVM_CONTAINER_EXECUTOR_KEY)))
-                .setHdfsDefaultFs(hdfsLocalCluster.getHdfsConfig().get("fs.defaultFS"))
+                .setHdfsDefaultFs("file:///")
                 .setConfig(hdfsLocalCluster.getHdfsConfig())
                 .build();
     }
@@ -157,7 +168,7 @@ public class MapReduceWorkflowTest {
     }
 
     @Test
-    public void testSubmitWorkflowFromFile() throws Exception {
+    public void testFSWorkflowFromFile() throws Exception {
 
         LOG.info("OOZIE: Test Submit Workflow Start");
 
@@ -204,6 +215,58 @@ public class MapReduceWorkflowTest {
         hdfsFs.close();
 
     }
+
+//    @Test
+//    public void testShellWorkflowFromFile() throws Exception {
+//
+//        LOG.info("OOZIE: Test Submit Workflow Start");
+//
+//        FileSystem hdfsFs = hdfsLocalCluster.getHdfsFileSystemHandle();
+//        OozieClient oozie = oozieLocalServer.getOozieClient();
+//
+//        Path appPath = new Path(hdfsFs.getHomeDirectory(), "testApp");
+//        hdfsFs.mkdirs(new Path(appPath, "lib"));
+//        Path workflow = new Path(appPath, "workflow.xml");
+//
+//        Path shellScriptPath = new Path(appPath, "shell-scripts");
+//        hdfsFs.mkdirs(shellScriptPath);
+//        hdfsFs.copyFromLocalFile(new Path("./workflows/shell-scripts/get-timestamp.sh"), shellScriptPath);
+//        //write workflow.xml
+//
+//        Reader reader = getResourceAsReader("workflow-shell.xml");
+//        Writer writer = new OutputStreamWriter(hdfsFs.create(workflow));
+//        copyCharStream(reader, writer);
+//        writer.close();
+//
+//        //write job.properties
+//        Properties conf = oozie.createConfiguration();
+//        conf.setProperty(OozieClient.APP_PATH, workflow.toString());
+//        conf.setProperty(OozieClient.USER_NAME, UserGroupInformation.getCurrentUser().getUserName());
+//
+//        //submit and check
+//        final String jobId = oozie.submit(conf);
+//        WorkflowJob wf = oozie.getJobInfo(jobId);
+//        assertNotNull(wf);
+//        assertEquals(WorkflowJob.Status.PREP, wf.getStatus());
+//
+//        oozie.start(jobId);
+//
+//        while (oozie.getJobInfo(jobId).getStatus() == WorkflowJob.Status.RUNNING) {
+//            System.out.println("Workflow job running ...");
+//            Thread.sleep(10 * 1000);
+//        }
+//
+//        wf = oozie.getJobInfo(jobId);
+//
+//        System.out.print("ERROR MSG: " + wf.getActions().get(1).getErrorMessage());
+//
+//        assertNotNull(wf);
+//        assertEquals(WorkflowJob.Status.SUCCEEDED, wf.getStatus());
+//
+//        LOG.info("OOZIE: Workflow: {}", wf.toString());
+//        hdfsFs.close();
+//
+//    }
 
     @Test
     public void testOozieShareLib() throws Exception {

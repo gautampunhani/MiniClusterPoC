@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.4" name="shell-wf">
+    <global>
+        <job-tracker>localhost:37003</job-tracker>
+        <name-node>hdfs://localhost:20112</name-node>
+    </global>
+    <start to="SetTimestamp"/>
+    <action name="SetTimestamp">
+        <shell xmlns="uri:oozie:shell-action:0.3">
+            <exec>shell-scripts/get-timestamp.sh</exec>
+            <file>shell-scripts/get-timestamp.sh#get-timestamp.sh</file>
+            <capture-output/>
+        </shell>
+        <ok to="end"/>
+        <error to="error"/>
+    </action>
+
+    <kill name="error">
+        <message>error message</message>
+    </kill>
+
+    <end name="end"/>
+</workflow-app>
